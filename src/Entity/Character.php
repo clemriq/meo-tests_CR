@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
@@ -21,11 +20,21 @@ class Character
     #[ORM\Column]
     private int $constitution;
 
+    #[ORM\Column]
+    private int $level = 1;
+
+    #[ORM\Column]
+    private int $experience = 0;
+
+    #[ORM\Column]
+    private int $hp;
+
     public function __construct(string $name, int $strength, int $constitution)
     {
         $this->name = $name;
         $this->strength = $strength;
         $this->constitution = $constitution;
+        $this->hp = $this->getHp();
     }
 
     public function getId(): ?int
@@ -66,21 +75,75 @@ class Character
         return $this;
     }
 
+    public function getLevel(): int
+    {
+        return $this->level;
+    }
+
+    public function getExperience(): int
+    {
+        return $this->experience;
+    }
+
+    // Formule : HP = 10 + (Constitution * 2) + (Niveau * 2)
     public function getHp(): int
     {
-        // TODO: Implement HP calculation
-        return 0;
+        return 10 + ($this->constitution * 2) + ($this->level * 2);
     }
 
+    // Formule : Attaque = 2 + (Force * 1) + (Niveau * 1)
     public function getAttack(): int
     {
-        // TODO: Implement Attack calculation
-        return 0;
+        return 2 + ($this->strength * 1) + ($this->level * 1);
     }
 
-    public function getDefense(): int
+    // Formule : Défense = 1 + (Constitution * 0.5) + (Niveau * 0.5)
+    public function getDefense(): float
     {
-        // TODO: Implement Defense calculation
-        return 0;
+        return 1 + ($this->constitution * 0.5) + ($this->level * 0.5);
+    }
+
+    // Attaque un autre personnage
+    // Formule : Dégâts = max(1, Attaque de l'attaquant - Défense du défenseur)
+    public function attack(Character $target): void
+    {
+        $damage = max(1, $this->getAttack() - $target->getDefense());
+        $target->receiveDamage($damage);
+    }
+
+    // Réception des dégâts
+    public function receiveDamage(int $damage): void
+    {
+        $this->hp -= $damage;
+        if ($this->hp < 0) {
+            $this->hp = 0;
+        }
+    }
+
+    // Gagner de l'expérience et monter de niveau
+    public function gainExperience(int $xp): void
+    {
+        $this->experience += $xp;
+        
+        while ($this->experience >= $this->getExperienceThreshold()) {
+            $this->levelUp();
+        }
+    }
+
+    // Monte de niveau si l'XP atteint le seuil
+    private function levelUp(): void
+    {
+        $this->experience -= $this->getExperienceThreshold();
+        $this->level++;
+        $this->strength += 1;
+        $this->constitution += 1;
+        $this->hp = $this->getHp();
+    }
+
+    // Formule : Seuil d'XP pour niveau suivant = 100 * Niveau
+    private function getExperienceThreshold(): int
+    {
+        return 100 * $this->level;
     }
 }
+    
